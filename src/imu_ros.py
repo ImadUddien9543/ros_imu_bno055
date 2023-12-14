@@ -41,6 +41,7 @@ Author:  Robert Vasquez Zavaleta
 import rospy
 import os
 from ros_imu_bno055.imu_bno055_api import * 
+from geometry_msgs.msg import Vector3
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import Temperature
 from sensor_msgs.msg import MagneticField
@@ -73,6 +74,7 @@ class SensorIMU:
 
         # Create topics
         self.pub_imu_data = rospy.Publisher('imu/data', Imu, queue_size=1)
+        self.pub_imu_euler = rospy.Publisher('imu/euler', Vector3, queue_size=1)
 
         if self.use_magnetometer == True:
             self.pub_imu_magnetometer = rospy.Publisher('imu/magnetometer', MagneticField, queue_size=1)
@@ -97,7 +99,7 @@ class SensorIMU:
         self.operation_mode_str = rospy.get_param(self.node_name + '/operation_mode', 'IMU')
         self.oscillator_str = rospy.get_param(self.node_name + '/oscillator', 'INTERNAL')
         self.reset_orientation = rospy.get_param(self.node_name + '/reset_orientation', True)
-        self.frequency = rospy.get_param(self.node_name + '/frequency', 20)
+        self.frequency = rospy.get_param(self.node_name + '/frequency', 50)
         self.use_magnetometer = rospy.get_param(self.node_name + '/use_magnetometer', False)
         self.use_temperature = rospy.get_param(self.node_name + '/use_temperature', False)
 
@@ -322,6 +324,17 @@ class SensorIMU:
 
         self.pub_imu_magnetometer.publish(imu_magnetometer)
 
+    def publish_imu_euler(self):
+        imu_euler = Vector3()
+
+        euler = self.bno055.get_euler_orientation()
+        imu_euler.x = euler[2] 
+        imu_euler.y = euler[1]
+        imu_euler.z = euler[0]
+        
+        self.pub_imu_euler.publish(imu_euler)
+        
+
     def publish_imu_temperature(self):
 
         imu_temperature = Temperature()
@@ -360,6 +373,9 @@ class SensorIMU:
 
                 # Publish imu data
                 self.publish_imu_data()
+
+                # Publish euler data
+                self.publish_imu_euler()
    
                 # Publish magnetometer data
                 if self.use_magnetometer == True:
