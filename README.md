@@ -92,7 +92,7 @@ $ pip install pyserial
 
 ```
 $ roscd ros_imu_bno055
-$ sudo cp utils/99-bno055.rules /etc/udev/rules.
+$ sudo cp utils/99-bno055.rules /etc/udev/rules.d/
 $ sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
