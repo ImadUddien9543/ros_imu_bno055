@@ -75,6 +75,7 @@ class SensorIMU:
         # Create topics
         self.pub_imu_data = rospy.Publisher('imu/data', Imu, queue_size=1)
         self.pub_imu_euler = rospy.Publisher('imu/euler', Vector3, queue_size=1)
+        self.pub_timer = rospy.Timer(rospy.Duration(self.frequency), self.run)
 
         if self.use_magnetometer == True:
             self.pub_imu_magnetometer = rospy.Publisher('imu/magnetometer', MagneticField, queue_size=1)
@@ -87,9 +88,17 @@ class SensorIMU:
         self.reset_imu_device = rospy.Service('imu/reset_device', Empty, self.callback_reset_imu_device)
         self.calibration_imu_staus = rospy.Service('imu/calibration_status', Trigger, self.callback_calibration_imu_status)
         
+        
 
         # Print node status
         rospy.loginfo(self.node_name + " ready!")
+        # Reset IMU to reset axis orientation. 
+        if self.reset_orientation == True:
+            self.reset_imu()
+
+        # Configuration is necessary every time the IMU is turned on or reset
+        self.set_imu_configuration()
+
 
 
     def get_ros_params(self):
@@ -351,50 +360,27 @@ class SensorIMU:
 
         self.pub_imu_temperature.publish(imu_temperature)
 
-    def run(self):
-
-        # Reset IMU to reset axis orientation. 
-        if self.reset_orientation == True:
-            self.reset_imu()
-
-        # Configuration is necessary every time the IMU is turned on or reset
-        self.set_imu_configuration()
-
-        # Set frequency
-        rate = rospy.Rate(self.frequency)
-
-        while not rospy.is_shutdown():
-
-            if self.stop_request == False:
-                
-                #start_time = time.time()
-                self.bno055.update_imu_data()
-                #print("--- %s seconds ---" % (time.time() - start_time)) 
-
-                # Publish imu data
-                self.publish_imu_data()
-
-                # Publish euler data
-                self.publish_imu_euler()
-   
-                # Publish magnetometer data
-                if self.use_magnetometer == True:
-                    self.publish_imu_magnetometer()
-
-                # Publish temperature data                
-                if self.use_temperature == True:
-                    self.publish_imu_temperature()
-
-            rate.sleep()
+    def run(self, event=None):
+        if self.stop_request == False:
+            #start_time = time.time()
+            self.bno055.update_imu_data()
+            #print("--- %s seconds ---" % (time.time() - start_time)) 
+            # Publish imu data
+            self.publish_imu_data()
+            # Publish euler data
+            self.publish_imu_euler()
+            # Publish magnetometer data
+            if self.use_magnetometer == True:
+                self.publish_imu_magnetometer()
+            # Publish temperature data                
+            if self.use_temperature == True:
+                self.publish_imu_temperature()
 
 
 if __name__ == '__main__':
-
     imu = SensorIMU()
-
     try:
-        imu.run()
-
+          rospy.spin()
     except rospy.ROSInterruptException:
         pass
 
